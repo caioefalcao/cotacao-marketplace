@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+
+# Environment variables — NEVER commitar credenciais
+.env
+.env.*
+!.env.example
+
+# Banco de dados SQLite
+data/
+
+# Screenshots capturadas em runtime
+screenshots/
+
+# Arquivos de debug/sonda temporários
+probe-*.mjs
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
