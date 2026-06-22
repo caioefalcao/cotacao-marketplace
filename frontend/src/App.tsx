@@ -17,13 +17,15 @@ export default function App() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchData, setSearchData] = useState<SearchResponse | null>(null);
   const [lastQuery, setLastQuery] = useState('');
+  const [lastDescription, setLastDescription] = useState('');
 
-  async function handleSearch(query: string) {
+  async function handleSearch(name: string, description?: string) {
     setLoading(true);
     setSearchError(null);
-    setLastQuery(query);
+    setLastQuery(name);
+    setLastDescription(description ?? '');
     try {
-      const result = await searchProducts(query);
+      const result = await searchProducts(name, description);
       setSearchData(result);
     } catch (e) {
       setSearchError(e instanceof Error ? e.message : 'Erro desconhecido');
@@ -68,6 +70,11 @@ export default function App() {
                   {searchData.results.length} resultado
                   {searchData.results.length !== 1 ? 's' : ''} para{' '}
                   <strong>"{lastQuery}"</strong>
+                  {lastDescription && searchData.search_query !== lastQuery && (
+                    <span className="results-summary__refined">
+                      {' '}— IA buscou: <em>"{searchData.search_query}"</em>
+                    </span>
+                  )}
                 </p>
                 <ResultsGrid data={searchData} />
               </>

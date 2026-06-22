@@ -12,10 +12,17 @@ export interface Product {
 export interface SearchResponse {
   results: Product[];
   errors: { source: string; message: string }[];
+  search_query: string;
 }
 
-export async function searchProducts(query: string): Promise<SearchResponse> {
-  const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+export async function searchProducts(
+  name: string,
+  description?: string,
+): Promise<SearchResponse> {
+  const params = new URLSearchParams({ q: name });
+  if (description?.trim()) params.set('description', description.trim());
+
+  const res = await fetch(`/api/search?${params}`);
   if (!res.ok) {
     throw new Error(`Erro ${res.status}: ${res.statusText}`);
   }
