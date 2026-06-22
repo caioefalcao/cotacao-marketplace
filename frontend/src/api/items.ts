@@ -9,6 +9,8 @@ export interface Item {
 export interface ItemWithStats extends Item {
   quotation_count: number;
   median: number | null;
+  p25: number | null;
+  p75: number | null;
   status: 'Com Cotações' | 'Sem Cotações';
 }
 
@@ -64,8 +66,45 @@ export async function triggerQuote(id: number): Promise<QuoteResult> {
   return res.json();
 }
 
+export async function getItem(id: number): Promise<ItemWithStats> {
+  const res = await fetch(`/api/items/${id}`);
+  if (!res.ok) throw new Error(`Erro ${res.status}`);
+  return res.json();
+}
+
+export async function updateItem(
+  id: number,
+  data: { name?: string; description?: string; category?: string },
+): Promise<Item> {
+  const res = await fetch(`/api/items/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`Erro ${res.status}`);
+  return res.json();
+}
+
 export async function listQuotations(id: number): Promise<Quotation[]> {
   const res = await fetch(`/api/items/${id}/quotations`);
+  if (!res.ok) throw new Error(`Erro ${res.status}`);
+  return res.json();
+}
+
+export async function deleteQuotation(id: number): Promise<void> {
+  const res = await fetch(`/api/quotations/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(`Erro ${res.status}`);
+}
+
+export async function updateQuotation(
+  id: number,
+  data: { price?: number | null; product_url?: string },
+): Promise<Quotation> {
+  const res = await fetch(`/api/quotations/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
   if (!res.ok) throw new Error(`Erro ${res.status}`);
   return res.json();
 }

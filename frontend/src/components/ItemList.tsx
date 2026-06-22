@@ -2,16 +2,18 @@ import { useEffect, useState, useCallback } from 'react';
 import { listItems, deleteItem, triggerQuote } from '../api/items';
 import type { ItemWithStats } from '../api/items';
 import { AddItemModal } from './AddItemModal';
-import { ItemDetail } from './ItemDetail';
 
 type FilterTab = 'all' | 'com' | 'sem';
 
-export function ItemList() {
+interface ItemListProps {
+  onViewDetail: (id: number) => void;
+}
+
+export function ItemList({ onViewDetail }: ItemListProps) {
   const [items, setItems] = useState<ItemWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterTab>('all');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [detailItem, setDetailItem] = useState<ItemWithStats | null>(null);
   const [quotingIds, setQuotingIds] = useState<Set<number>>(new Set());
   const [lastQuery, setLastQuery] = useState<Record<number, string>>({});
 
@@ -162,7 +164,7 @@ export function ItemList() {
                         <button
                           className="action-btn action-btn--view"
                           title="Ver cotações"
-                          onClick={() => setDetailItem(item)}
+                          onClick={() => onViewDetail(item.id)}
                         >
                           👁
                         </button>
@@ -202,12 +204,6 @@ export function ItemList() {
         />
       )}
 
-      {detailItem && (
-        <ItemDetail
-          item={detailItem}
-          onClose={() => setDetailItem(null)}
-        />
-      )}
     </div>
   );
 }

@@ -3,14 +3,21 @@ import { Sidebar } from './components/Sidebar';
 import { ItemList } from './components/ItemList';
 import { SearchBar } from './components/SearchBar';
 import { ResultsGrid } from './components/ResultsGrid';
+import { QuotationScreen } from './components/QuotationScreen';
 import { searchProducts } from './api/search';
 import type { SearchResponse } from './api/search';
 import './App.css';
 
-type View = 'items' | 'search';
+type View = 'items' | 'search' | 'detail';
 
 export default function App() {
   const [view, setView] = useState<View>('items');
+  const [detailItemId, setDetailItemId] = useState<number | null>(null);
+
+  function openDetail(id: number) {
+    setDetailItemId(id);
+    setView('detail');
+  }
 
   // search state
   const [loading, setLoading] = useState(false);
@@ -40,7 +47,14 @@ export default function App() {
       <Sidebar activeView={view} onNavigate={setView} />
 
       <div className="content">
-        {view === 'items' && <ItemList />}
+        {view === 'items' && <ItemList onViewDetail={openDetail} />}
+
+        {view === 'detail' && detailItemId !== null && (
+          <QuotationScreen
+            itemId={detailItemId}
+            onBack={() => setView('items')}
+          />
+        )}
 
         {view === 'search' && (
           <div className="view">

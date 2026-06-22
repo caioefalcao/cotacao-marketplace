@@ -29,6 +29,25 @@ export async function registerItemsRoute(app: FastifyInstance): Promise<void> {
     },
   );
 
+  app.get<{ Params: { id: string } }>('/api/items/:id', async (req, reply) => {
+    const id = Number(req.params.id);
+    if (isNaN(id)) return reply.code(400).send({ error: 'ID inválido' });
+    const item = itemsDb.findByIdWithStats(id);
+    if (!item) return reply.code(404).send({ error: 'Item não encontrado' });
+    return item;
+  });
+
+  app.patch<{ Params: { id: string }; Body: { name?: string; description?: string; category?: string } }>(
+    '/api/items/:id',
+    async (req, reply) => {
+      const id = Number(req.params.id);
+      if (isNaN(id)) return reply.code(400).send({ error: 'ID inválido' });
+      const updated = itemsDb.update(id, req.body);
+      if (!updated) return reply.code(404).send({ error: 'Item não encontrado' });
+      return updated;
+    },
+  );
+
   app.delete<{ Params: { id: string } }>('/api/items/:id', async (req, reply) => {
     const id = Number(req.params.id);
     if (isNaN(id)) return reply.code(400).send({ error: 'ID inválido' });

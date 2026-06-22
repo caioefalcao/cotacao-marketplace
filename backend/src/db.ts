@@ -46,6 +46,8 @@ export interface Item {
 export interface ItemWithStats extends Item {
   quotation_count: number;
   median: number | null;
+  p25: number | null;
+  p75: number | null;
   status: 'Com Cotações' | 'Sem Cotações';
 }
 
@@ -68,6 +70,14 @@ function calcMedian(prices: number[]): number | null {
   return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
+// Nearest-rank percentile (k in 0–100)
+function calcPercentile(prices: number[], k: number): number | null {
+  if (prices.length === 0) return null;
+  const sorted = [...prices].sort((a, b) => a - b);
+  const idx = Math.max(0, Math.ceil((k / 100) * sorted.length) - 1);
+  return sorted[idx];
+}
+
 export const itemsDb = {
   list(): ItemWithStats[] {
     const items = db.prepare('SELECT * FROM items ORDER BY id DESC').all() as Item[];
@@ -76,11 +86,12 @@ export const itemsDb = {
         .prepare('SELECT price FROM quotations WHERE item_id = ? AND price IS NOT NULL')
         .all(item.id) as { price: number }[];
       const prices = rows.map((r) => r.price);
-      const median = calcMedian(prices);
       return {
         ...item,
         quotation_count: prices.length,
-        median,
+        median: calcMedian(prices),
+        p25: calcPercentile(prices, 25),
+        p75: calcPercentile(prices, 75),
         status: prices.length > 0 ? 'Com Cotações' : 'Sem Cotações',
       } as ItemWithStats;
     });
@@ -96,6 +107,35 @@ export const itemsDb = {
 
   findById(id: number): Item | undefined {
     return db.prepare('SELECT * FROM items WHERE id = ?').get(id) as Item | undefined;
+  },
+
+  findByIdWithStats(id: number): ItemWithStats | undefined {
+    const item = db.prepare('SELECT * FROM items WHERE id = ?').get(id) as Item | undefined;
+    if (!item) return undefined;
+    const rows = db
+      .prepare('SELECT price FROM quotations WHERE item_id = ? AND price IS NOT NULL')
+      .all(id) as { price: number }[];
+    const prices = rows.map((r) => r.price);
+    return {
+      ...item,
+      quotation_count: prices.length,
+      median: calcMedian(prices),
+      p25: calcPercentile(prices, 25),
+      p75: calcPercentile(prices, 75),
+      status: prices.length > 0 ? 'Com Cotações' : 'Sem Cotações',
+    };
+  },
+
+  update(id: number, data: { name?: string; description?: string; category?: string }): Item | undefined {
+    const fields: string[] = [];
+    const values: unknown[] = [];
+    if (data.name !== undefined) { fields.push('name = ?'); values.push(data.name); }
+    if (data.description !== undefined) { fields.push('description = ?'); values.push(data.description); }
+    if (data.category !== undefined) { fields.push('category = ?'); values.push(data.category); }
+    if (fields.length === 0) return this.findById(id);
+    values.push(id);
+    db.prepare(`UPDATE items SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+    return this.findById(id);
   },
 
   delete(id: number): boolean {
@@ -136,6 +176,22 @@ export const quotationsDb = {
     return db
       .prepare('SELECT * FROM quotations WHERE item_id = ? ORDER BY found_at DESC')
       .all(item_id) as Quotation[];
+  },
+
+  deleteOne(id: number): boolean {
+    const result = db.prepare('DELETE FROM quotations WHERE id = ?').run(id);
+    return result.changes > 0;
+  },
+
+  update(id: number, data: { price?: number | null; product_url?: string }): Quotation | undefined {
+    const fields: string[] = [];
+    const values: unknown[] = [];
+    if ('price' in data) { fields.push('price = ?'); values.push(data.price ?? null); }
+    if (data.product_url !== undefined) { fields.push('product_url = ?'); values.push(data.product_url); }
+    if (fields.length === 0) return db.prepare('SELECT * FROM quotations WHERE id = ?').get(id) as Quotation | undefined;
+    values.push(id);
+    db.prepare(`UPDATE quotations SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+    return db.prepare('SELECT * FROM quotations WHERE id = ?').get(id) as Quotation | undefined;
   },
 };
 

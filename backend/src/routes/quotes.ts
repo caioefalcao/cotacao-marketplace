@@ -69,4 +69,25 @@ export function registerQuotesRoute(app: FastifyInstance, adapters: SourceAdapte
     if (!itemsDb.findById(id)) return reply.code(404).send({ error: 'Item não encontrado' });
     return quotationsDb.listByItem(id);
   });
+
+  // Delete a single quotation
+  app.delete<{ Params: { id: string } }>('/api/quotations/:id', async (req, reply) => {
+    const id = Number(req.params.id);
+    if (isNaN(id)) return reply.code(400).send({ error: 'ID inválido' });
+    const deleted = quotationsDb.deleteOne(id);
+    if (!deleted) return reply.code(404).send({ error: 'Cotação não encontrada' });
+    reply.code(204);
+  });
+
+  // Update price / url of a quotation
+  app.patch<{ Params: { id: string }; Body: { price?: number | null; product_url?: string } }>(
+    '/api/quotations/:id',
+    async (req, reply) => {
+      const id = Number(req.params.id);
+      if (isNaN(id)) return reply.code(400).send({ error: 'ID inválido' });
+      const updated = quotationsDb.update(id, req.body);
+      if (!updated) return reply.code(404).send({ error: 'Cotação não encontrada' });
+      return updated;
+    },
+  );
 }
