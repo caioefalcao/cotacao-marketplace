@@ -195,13 +195,19 @@ export function AddItemModal({ onClose, onDone }: AddItemModalProps) {
     <div className="modal-overlay">
       <div className="modal modal--wide" onClick={(e) => e.stopPropagation()}>
         <div className="modal__header">
-          <div>
+          <div style={{ flex: 1 }}>
             <h2>Selecione os produtos para a cotação</h2>
-            {searchQuery && (
-              <p className="modal__subtitle">
-                IA buscou: <strong>"{searchQuery}"</strong>
-                {' '}· {selected.length} selecionado{selected.length !== 1 ? 's' : ''}
-              </p>
+            <p className="modal__subtitle">
+              <strong>{name}</strong>
+              {searchQuery && (
+                <> · IA buscou: <em>"{searchQuery}"</em></>
+              )}
+              {' '}· {selected.length} selecionado{selected.length !== 1 ? 's' : ''}
+            </p>
+            {description && (
+              <div className="candidates__item-desc">
+                <span className="candidates__item-desc-label">Descrição:</span> {description}
+              </div>
             )}
           </div>
         </div>
@@ -238,6 +244,26 @@ export function AddItemModal({ onClose, onDone }: AddItemModalProps) {
                           checked={sel}
                           onChange={() => toggleProduct(p)}
                         />
+                        <div className="candidate-card__thumb-wrap">
+                          {p.imageUrl ? (
+                            <img
+                              src={p.imageUrl}
+                              alt={p.title}
+                              className="candidate-card__thumb"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                (e.currentTarget.nextElementSibling as HTMLElement | null)
+                                  ?.style.setProperty('display', 'flex');
+                              }}
+                            />
+                          ) : null}
+                          <div
+                            className="candidate-card__no-img"
+                            style={{ display: p.imageUrl ? 'none' : 'flex' }}
+                          >
+                            🖼
+                          </div>
+                        </div>
                         <div className="candidate-card__info">
                           <span className="candidate-card__title">{p.title}</span>
                           <span className="candidate-card__price">{formatPrice(p.price)}</span>
