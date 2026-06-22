@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { itemsDb, quotationsDb } from '../db.js';
 import { screenshotUrl } from '../utils/screenshot.js';
 import { refineSearchQuery } from '../utils/queryRefiner.js';
+import { filterAndRank } from '../utils/similarity.js';
 import type { SourceAdapter } from '../adapters/types.js';
 
 export function registerQuotesRoute(app: FastifyInstance, adapters: SourceAdapter[]): void {
@@ -25,9 +26,10 @@ export function registerQuotesRoute(app: FastifyInstance, adapters: SourceAdapte
           ),
         ]);
 
-        if (!products.length) return null;
+        const top = filterAndRank(products, searchQuery, 1);
+        if (!top.length) return null;
 
-        const best = products[0];
+        const best = top[0];
 
         let screenshot: string | undefined;
         try {

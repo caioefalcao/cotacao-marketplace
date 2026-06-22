@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { Product, SourceAdapter } from '../adapters/types.js';
 import { TtlCache } from '../utils/cache.js';
 import { refineSearchQuery } from '../utils/queryRefiner.js';
+import { filterAndRank } from '../utils/similarity.js';
 
 const ADAPTER_TIMEOUT_MS = 25000;
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -58,7 +59,8 @@ export function registerSearchRoute(app: FastifyInstance, adapters: SourceAdapte
       settled.forEach((result, index) => {
         const source = adapters[index].name;
         if (result.status === 'fulfilled') {
-          response.results.push(...result.value);
+          const top2 = filterAndRank(result.value, searchQuery, 2);
+          response.results.push(...top2);
         } else {
           response.errors.push({ source, message: result.reason?.message ?? 'Unknown error' });
         }
