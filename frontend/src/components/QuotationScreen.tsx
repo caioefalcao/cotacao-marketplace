@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   getItem,
   updateItem,
@@ -41,6 +41,19 @@ export function QuotationScreen({ itemId, onBack }: Props) {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(true);
   const [quoting, setQuoting] = useState(false);
+  const [quotingMsgIdx, setQuotingMsgIdx] = useState(0);
+  const quotingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const QUOTING_MESSAGES = [
+    'Consultando IA para refinar a busca...',
+    'Buscando no Magazine Luiza...',
+    'Buscando no Mercado Livre...',
+    'Buscando na Decathlon...',
+    'Buscando na Netshoes...',
+    'Filtrando produtos mais relevantes...',
+    'Calculando mediana e percentis...',
+    'Quase lá, salvando resultados...',
+  ];
   const [editing, setEditing] = useState<EditingQuotation | null>(null);
   const [editingItem, setEditingItem] = useState(false);
   const [editName, setEditName] = useState('');
@@ -65,12 +78,17 @@ export function QuotationScreen({ itemId, onBack }: Props) {
     return p.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 
-  async function handleNewQuote() {
+  async function handleUpdateQuote() {
+    setQuotingMsgIdx(0);
     setQuoting(true);
+    quotingIntervalRef.current = setInterval(() => {
+      setQuotingMsgIdx((i) => (i + 1) % QUOTING_MESSAGES.length);
+    }, 2200);
     try {
       await triggerQuote(itemId);
       await refresh();
     } finally {
+      if (quotingIntervalRef.current) clearInterval(quotingIntervalRef.current);
       setQuoting(false);
     }
   }
@@ -197,16 +215,30 @@ export function QuotationScreen({ itemId, onBack }: Props) {
         </div>
       )}
 
-      {/* ── Nova Cotação ── */}
+      {/* ── Atualizar Cotação ── */}
       <div className="qs__quote-action">
         <button
           className="btn btn--primary btn--lg"
-          onClick={handleNewQuote}
+          onClick={handleUpdateQuote}
           disabled={quoting}
         >
-          {quoting ? '⟳ Buscando cotações...' : '+ Nova Cotação'}
+          🔄 Atualizar Cotação
         </button>
       </div>
+
+      {/* ── Loading overlay (durante busca) ── */}
+      {quoting && (
+        <div className="quoting-overlay">
+          <div className="quoting-overlay__box">
+            <div className="spinner spinner--lg" />
+            <p className="quoting-overlay__msg">{QUOTING_MESSAGES[quotingMsgIdx]}</p>
+            <p className="quoting-overlay__hint">
+              Buscando nos marketplaces e filtrando os resultados mais relevantes.<br />
+              Isso pode levar até 30 segundos.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── Cotações Cadastradas ── */}
       <div className="card">
@@ -219,7 +251,7 @@ export function QuotationScreen({ itemId, onBack }: Props) {
 
         {quotations.length === 0 ? (
           <div className="table-empty">
-            Nenhuma cotação ainda. Clique em "+ Nova Cotação" para buscar automaticamente.
+            Nenhuma cotação ainda. Clique em "Atualizar Cotação" para buscar automaticamente.
           </div>
         ) : (
           <table className="items-table qs__table">
@@ -263,6 +295,9 @@ export function QuotationScreen({ itemId, onBack }: Props) {
                 ) : (
                   <tr key={q.id}>
                     <td>
+                      {q.title && (
+                        <div className="qs__product-title">{q.title}</div>
+                      )}
                       <a
                         href={q.product_url ?? '#'}
                         target="_blank"
