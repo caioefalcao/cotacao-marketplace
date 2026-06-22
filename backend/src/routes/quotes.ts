@@ -70,6 +70,72 @@ export function registerQuotesRoute(app: FastifyInstance, adapters: SourceAdapte
     return quotationsDb.listByItem(id);
   });
 
+  // Search candidates per marketplace without saving (top 3 per source)
+  app.get<{ Params: { id: string } }>('/api/items/:id/candidates', async (req, reply) => {
+    const id = Number(req.params.id);
+    if (isNaN(id)) return reply.code(400).send({ error: 'ID inválido' });
+
+    const item = itemsDb.findById(id);
+    if (!item) return reply.code(404).send({ error: 'Item não encontrado' });
+
+    const searchQuery = await refineSearchQuery(item.name, item.description);
+
+    const settled = await Promise.allSettled(
+      adapters.map((adapter) =>
+        Promise.race([
+          adapter.search(searchQuery),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('timeout')), 25000),
+          ),
+        ]),
+      ),
+    );
+
+    const candidates: Record<string, object[]> = {};
+    settled.forEach((result, index) => {
+      const source = adapters[index].name;
+      if (result.status === 'fulfilled') {
+        const top3 = filterAndRank(result.value, searchQuery, 3);
+        if (top3.length > 0) candidates[source] = top3;
+      }
+    });
+
+    return { search_query: searchQuery, candidates };
+  });
+
+  // Save user-selected products as quotations (no screenshot at this step)
+  app.post<{
+    Params: { id: string };
+    Body: {
+      products: Array<{
+        source: string;
+        title: string;
+        price: number | null;
+        currency: string;
+        product_url: string;
+      }>;
+    };
+  }>('/api/items/:id/quotations/bulk', async (req, reply) => {
+    const id = Number(req.params.id);
+    if (isNaN(id)) return reply.code(400).send({ error: 'ID inválido' });
+    if (!itemsDb.findById(id)) return reply.code(404).send({ error: 'Item não encontrado' });
+
+    let saved = 0;
+    for (const p of req.body.products) {
+      quotationsDb.create({
+        item_id: id,
+        source: p.source,
+        title: p.title,
+        price: p.price,
+        currency: p.currency ?? 'BRL',
+        product_url: p.product_url,
+      });
+      saved++;
+    }
+
+    return { saved };
+  });
+
   // Delete a single quotation
   app.delete<{ Params: { id: string } }>('/api/quotations/:id', async (req, reply) => {
     const id = Number(req.params.id);

@@ -197,9 +197,10 @@ export function ItemList({ onViewDetail }: ItemListProps) {
       {showAddModal && (
         <AddItemModal
           onClose={() => setShowAddModal(false)}
-          onCreated={async () => {
+          onDone={(itemId) => {
             setShowAddModal(false);
-            await refresh();
+            refresh();
+            onViewDetail(itemId);
           }}
         />
       )}

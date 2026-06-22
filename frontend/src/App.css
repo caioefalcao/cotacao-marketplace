@@ -554,3 +554,75 @@ a { color: inherit; }
 
 .btn--lg { padding: 12px 32px; font-size: 15px; }
 .btn--sm { padding: 5px 12px; font-size: 12px; }
+
+/* ─── Candidate selection (AddItemModal step: select) ──────────── */
+.modal__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 15px;
+}
+.modal__loading-hint { font-size: 13px; }
+
+.candidates__body { display: flex; flex-direction: column; overflow: hidden; }
+
+.candidates__group { padding: 16px 24px; border-bottom: 1px solid var(--border); }
+.candidates__group:last-of-type { border-bottom: none; }
+.candidates__group-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.candidates__list { display: flex; flex-direction: column; gap: 8px; }
+
+.candidate-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  background: var(--white);
+}
+.candidate-card:hover { border-color: var(--primary); background: #f0f7ff; }
+.candidate-card--selected { border-color: var(--primary); background: #e8f2ff; }
+
+.candidate-card__check { width: 16px; height: 16px; accent-color: var(--primary); flex-shrink: 0; }
+.candidate-card__info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.candidate-card__title {
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.candidate-card__price { font-size: 13px; font-weight: 700; color: var(--success); }
+.candidate-card__link {
+  font-size: 12px;
+  color: var(--primary);
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.candidate-card__link:hover { text-decoration: underline; }
+
+.candidates__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--white);
+  position: sticky;
+  bottom: 0;
+}

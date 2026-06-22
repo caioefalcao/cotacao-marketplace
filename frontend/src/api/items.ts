@@ -26,6 +26,20 @@ export interface Quotation {
   found_at: string;
 }
 
+export interface CandidateProduct {
+  source: string;
+  title: string;
+  price: number | null;
+  currency: string;
+  imageUrl: string | null;
+  productUrl: string;
+}
+
+export interface CandidatesResponse {
+  search_query: string;
+  candidates: Record<string, CandidateProduct[]>;
+}
+
 export interface QuoteResult {
   saved: number;
   errors: { source: string; message: string }[];
@@ -94,6 +108,31 @@ export async function listQuotations(id: number): Promise<Quotation[]> {
 export async function deleteQuotation(id: number): Promise<void> {
   const res = await fetch(`/api/quotations/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error(`Erro ${res.status}`);
+}
+
+export async function getItemCandidates(id: number): Promise<CandidatesResponse> {
+  const res = await fetch(`/api/items/${id}/candidates`);
+  if (!res.ok) throw new Error(`Erro ${res.status}`);
+  return res.json();
+}
+
+export async function saveBulkQuotations(
+  itemId: number,
+  products: Array<{
+    source: string;
+    title: string;
+    price: number | null;
+    currency: string;
+    product_url: string;
+  }>,
+): Promise<{ saved: number }> {
+  const res = await fetch(`/api/items/${itemId}/quotations/bulk`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ products }),
+  });
+  if (!res.ok) throw new Error(`Erro ${res.status}`);
+  return res.json();
 }
 
 export async function updateQuotation(
