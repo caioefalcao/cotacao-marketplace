@@ -13,6 +13,7 @@ export function ItemList() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [detailItem, setDetailItem] = useState<ItemWithStats | null>(null);
   const [quotingIds, setQuotingIds] = useState<Set<number>>(new Set());
+  const [lastQuery, setLastQuery] = useState<Record<number, string>>({});
 
   const refresh = useCallback(async () => {
     try {
@@ -30,7 +31,10 @@ export function ItemList() {
   async function handleQuote(item: ItemWithStats) {
     setQuotingIds((prev) => new Set(prev).add(item.id));
     try {
-      await triggerQuote(item.id);
+      const result = await triggerQuote(item.id);
+      if (result.search_query) {
+        setLastQuery((prev) => ({ ...prev, [item.id]: result.search_query }));
+      }
       await refresh();
     } finally {
       setQuotingIds((prev) => {
@@ -125,7 +129,7 @@ export function ItemList() {
                     <td className="text-muted">{item.category ?? '—'}</td>
                     <td className="price-cell">
                       {isQuoting ? (
-                        <span className="quoting-spinner">Buscando...</span>
+                        <span className="quoting-spinner">Consultando IA e buscando...</span>
                       ) : (
                         <>
                           <span className="price-value">{formatPrice(item.median)}</span>
@@ -133,6 +137,11 @@ export function ItemList() {
                             <span className="price-count">
                               {item.quotation_count} cot.
                             </span>
+                          )}
+                          {lastQuery[item.id] && (
+                            <div className="search-query-tag">
+                              IA buscou: <em>"{lastQuery[item.id]}"</em>
+                            </div>
                           )}
                         </>
                       )}

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { itemsDb, quotationsDb } from '../db.js';
 import { screenshotUrl } from '../utils/screenshot.js';
+import { refineSearchQuery } from '../utils/queryRefiner.js';
 import type { SourceAdapter } from '../adapters/types.js';
 
 export function registerQuotesRoute(app: FastifyInstance, adapters: SourceAdapter[]): void {
@@ -12,10 +13,13 @@ export function registerQuotesRoute(app: FastifyInstance, adapters: SourceAdapte
     const item = itemsDb.findById(id);
     if (!item) return reply.code(404).send({ error: 'Item não encontrado' });
 
+    const searchQuery = await refineSearchQuery(item.name, item.description);
+    app.log.info(`[quote] item="${item.name}" → query refinada="${searchQuery}"`);
+
     const results = await Promise.allSettled(
       adapters.map(async (adapter) => {
         const products = await Promise.race([
-          adapter.search(item.name),
+          adapter.search(searchQuery),
           new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error('timeout')), 50000),
           ),
@@ -53,7 +57,7 @@ export function registerQuotesRoute(app: FastifyInstance, adapters: SourceAdapte
         message: r.status === 'rejected' ? String(r.reason) : '',
       }));
 
-    return { saved, errors };
+    return { saved, errors, search_query: searchQuery };
   });
 
   // List quotations for an item

@@ -27,6 +27,7 @@ export interface Quotation {
 export interface QuoteResult {
   saved: number;
   errors: { source: string; message: string }[];
+  search_query: string;
 }
 
 export async function listItems(): Promise<ItemWithStats[]> {

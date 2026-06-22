@@ -57,13 +57,16 @@ export function AddItemModal({ onClose, onCreated }: AddItemModalProps) {
           </label>
 
           <label className="field">
-            <span className="field__label">Descrição</span>
-            <input
-              className="field__input"
-              type="text"
+            <span className="field__label">
+              Descrição técnica
+              <span className="field__hint"> — a IA usa para refinar a busca</span>
+            </span>
+            <textarea
+              className="field__input field__textarea"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Especificações adicionais"
+              placeholder={"Ex: Aparelho de exercício adutora tipo borboleta - Finalidade: fortalecimento muscular - Dimensões: aprox. 40cm x 12,5cm x 25cm - Material: aço com mola revestido em PVC e espuma"}
+              rows={4}
             />
           </label>
 
