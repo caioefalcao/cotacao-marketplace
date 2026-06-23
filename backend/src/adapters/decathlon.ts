@@ -21,9 +21,9 @@ export const decathlonAdapter: SourceAdapter = {
     try {
       await blockHeavyResources(page);
       const searchUrl = `${BASE_URL}/pesquisa/?q=${encodeURIComponent(query)}`;
-      await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+      await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
 
-      await page.waitForSelector('.product-card-v2', { timeout: 10000 });
+      await page.waitForSelector('.product-card-v2', { timeout: 20000 });
 
       const products = await page.evaluate((baseUrl) => {
         const cards = Array.from(document.querySelectorAll<HTMLElement>('.product-card-v2'));

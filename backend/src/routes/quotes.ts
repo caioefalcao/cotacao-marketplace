@@ -91,7 +91,7 @@ export function registerQuotesRoute(app: FastifyInstance, adapters: SourceAdapte
             Promise.race([
               adapter.search(q),
               new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('timeout')), 25000),
+                setTimeout(() => reject(new Error('timeout')), 60000),
               ),
             ]),
           ),

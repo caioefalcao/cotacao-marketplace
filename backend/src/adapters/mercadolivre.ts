@@ -25,11 +25,11 @@ export const mercadoLivreAdapter: SourceAdapter = {
     try {
       await blockHeavyResources(page);
       const searchUrl = `${BASE_URL}/jm/search?as_word=${encodeURIComponent(query)}`;
-      await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
+      await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
 
       // Wait for search result cards
       try {
-        await page.waitForSelector('.ui-search-layout__item', { timeout: 12000 });
+        await page.waitForSelector('.ui-search-layout__item', { timeout: 20000 });
       } catch {
         return [];
       }

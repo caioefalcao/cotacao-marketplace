@@ -4,7 +4,7 @@ import { TtlCache } from '../utils/cache.js';
 import { refineSearchQuery } from '../utils/queryRefiner.js';
 import { rankAll } from '../utils/similarity.js';
 
-const ADAPTER_TIMEOUT_MS = 25000;
+const ADAPTER_TIMEOUT_MS = 60000;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 interface SearchResponse {
