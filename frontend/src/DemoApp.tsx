@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
-import { searchMLDemo, calcStats } from './api/demo';
+import { searchAllDemo, calcStats } from './api/demo';
 import type { CandidateProduct } from './api/items';
 import './App.css';
 
@@ -44,7 +44,7 @@ function DemoAddModal({ onClose, onDone }: AddModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
-  const [candidates, setCandidates] = useState<CandidateProduct[]>([]);
+  const [candidates, setCandidates] = useState<Record<string, CandidateProduct[]>>({});
   const [selected, setSelected] = useState<CandidateProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,9 +53,9 @@ function DemoAddModal({ onClose, onDone }: AddModalProps) {
     if (!name.trim()) return;
     setStep('loading');
     setError(null);
-    const results = await searchMLDemo(name.trim());
-    if (results.length === 0) {
-      setError('Nenhum produto encontrado no Mercado Livre para este item.');
+    const results = await searchAllDemo(name.trim());
+    if (Object.keys(results).length === 0) {
+      setError('Nenhum produto encontrado para este item.');
       setStep('form');
       return;
     }
@@ -70,6 +70,10 @@ function DemoAddModal({ onClose, onDone }: AddModalProps) {
         ? prev.filter(x => x.productUrl !== key)
         : [...prev, p],
     );
+  }
+
+  function isSelected(productUrl: string) {
+    return selected.some(x => x.productUrl === productUrl);
   }
 
   function handleConfirm() {
@@ -122,16 +126,24 @@ function DemoAddModal({ onClose, onDone }: AddModalProps) {
     </div>
   );
 
+  const SOURCE_LABELS: Record<string, string> = {
+    mercadolivre: 'Mercado Livre',
+    magalu: 'Magazine Luiza',
+    netshoes: 'Netshoes',
+  };
+
   if (step === 'loading') return (
     <div className="modal-overlay">
       <div className="modal">
         <div className="modal__loading">
           <div className="spinner" />
-          <p>Buscando produtos no Mercado Livre...</p>
+          <p>Buscando produtos nos marketplaces...</p>
         </div>
       </div>
     </div>
   );
+
+  const sources = Object.keys(candidates);
 
   return (
     <div className="modal-overlay">
@@ -140,7 +152,7 @@ function DemoAddModal({ onClose, onDone }: AddModalProps) {
           <div style={{ flex: 1 }}>
             <h2>Selecione os produtos para a cotação</h2>
             <p className="modal__subtitle">
-              <strong>{name}</strong> · Mercado Livre · {selected.length} selecionado{selected.length !== 1 ? 's' : ''}
+              <strong>{name}</strong> · {selected.length} selecionado{selected.length !== 1 ? 's' : ''}
             </p>
             {description && (
               <div className="candidates__item-desc">
@@ -151,34 +163,42 @@ function DemoAddModal({ onClose, onDone }: AddModalProps) {
         </div>
 
         <div className="candidates__body">
-          <div className="candidates__group">
-            <div className="candidates__group-label">Mercado Livre</div>
-            <div className="candidates__list">
-              {candidates.map(p => {
-                const sel = selected.some(x => x.productUrl === p.productUrl);
-                return (
-                  <label key={p.productUrl} className={`candidate-card${sel ? ' candidate-card--selected' : ''}`}>
-                    <input type="checkbox" className="candidate-card__check" checked={sel} onChange={() => toggle(p)} />
-                    <div className="candidate-card__thumb-wrap">
-                      {p.imageUrl
-                        ? <img src={p.imageUrl} alt={p.title} className="candidate-card__thumb"
-                            onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; (e.currentTarget.nextElementSibling as HTMLElement | null)?.style.setProperty('display', 'flex'); }} />
-                        : null}
-                      <div className="candidate-card__no-img" style={{ display: p.imageUrl ? 'none' : 'flex' }}>🖼</div>
-                    </div>
-                    <div className="candidate-card__info">
-                      <span className="candidate-card__title">{p.title}</span>
-                      <span className="candidate-card__price">{fmt(p.price)}</span>
-                    </div>
-                    {p.productUrl && (
-                      <a href={p.productUrl} target="_blank" rel="noreferrer" className="candidate-card__link"
-                        onClick={e => e.stopPropagation()}>Ver →</a>
-                    )}
-                  </label>
-                );
-              })}
+          {sources.map(source => (
+            <div key={source} className="candidates__group">
+              <div className="candidates__group-label">
+                {SOURCE_LABELS[source] ?? source}
+                {source !== 'mercadolivre' && (
+                  <span style={{ fontSize: 11, fontWeight: 400, opacity: 0.6, marginLeft: 8 }}>(preços simulados)</span>
+                )}
+              </div>
+              <div className="candidates__list">
+                {(candidates[source] ?? []).map((p, i) => {
+                  const key = `${source}__${i}`;
+                  const uniqueUrl = `${p.productUrl}#${key}`;
+                  const sel = isSelected(uniqueUrl);
+                  return (
+                    <label key={key} className={`candidate-card${sel ? ' candidate-card--selected' : ''}`}>
+                      <input type="checkbox" className="candidate-card__check" checked={sel}
+                        onChange={() => toggle({ ...p, productUrl: uniqueUrl })} />
+                      <div className="candidate-card__thumb-wrap">
+                        {p.imageUrl
+                          ? <img src={p.imageUrl} alt={p.title} className="candidate-card__thumb"
+                              onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; (e.currentTarget.nextElementSibling as HTMLElement | null)?.style.setProperty('display', 'flex'); }} />
+                          : null}
+                        <div className="candidate-card__no-img" style={{ display: p.imageUrl ? 'none' : 'flex' }}>🖼</div>
+                      </div>
+                      <div className="candidate-card__info">
+                        <span className="candidate-card__title">{p.title}</span>
+                        <span className="candidate-card__price">{fmt(p.price)}</span>
+                      </div>
+                      <a href={p.productUrl.split('#')[0]} target="_blank" rel="noreferrer"
+                        className="candidate-card__link" onClick={e => e.stopPropagation()}>Ver →</a>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ))}
 
           <div className="candidates__footer">
             <button className="btn btn--ghost" onClick={onClose}>Cancelar</button>

@@ -1,6 +1,9 @@
 import type { CandidateProduct } from './items';
 
-export async function searchMLDemo(query: string): Promise<CandidateProduct[]> {
+type DemoSource = 'mercadolivre' | 'magalu' | 'netshoes';
+
+// ── Mercado Livre public API ───────────────────────────────────────
+async function fetchML(query: string): Promise<CandidateProduct[]> {
   try {
     const res = await fetch(
       `https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(query)}&limit=12`,
@@ -11,7 +14,7 @@ export async function searchMLDemo(query: string): Promise<CandidateProduct[]> {
       source: 'mercadolivre' as const,
       title: String(item.title ?? ''),
       price: typeof item.price === 'number' ? item.price : null,
-      currency: String(item.currency_id ?? 'BRL'),
+      currency: 'BRL',
       imageUrl: item.thumbnail
         ? String(item.thumbnail).replace('http://', 'https://')
         : null,
@@ -22,6 +25,72 @@ export async function searchMLDemo(query: string): Promise<CandidateProduct[]> {
   }
 }
 
+// ── Mock generator (deterministic, baseado nos preços reais do ML) ─
+const STORE_META: Record<DemoSource, { label: string; urlBase: string; suffix: string[] }> = {
+  mercadolivre: { label: 'Mercado Livre', urlBase: 'mercadolivre.com.br', suffix: [] },
+  magalu: {
+    label: 'Magazine Luiza',
+    urlBase: 'magazinevoce.com.br',
+    suffix: ['- Magazine Luiza', '| Magalu', '- Loja Oficial'],
+  },
+  netshoes: {
+    label: 'Netshoes',
+    urlBase: 'netshoes.com.br',
+    suffix: ['- Netshoes', '| Netshoes Brasil', '- Frete Grátis'],
+  },
+};
+
+// Hash determinístico para variações de preço reproduzíveis
+function deterministicVariation(seed: string, index: number): number {
+  let h = index * 31;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) & 0xffffffff;
+  // Retorna valor entre -0.12 e +0.12
+  return ((Math.abs(h) % 25) - 12) / 100;
+}
+
+function mockFromML(
+  source: DemoSource,
+  query: string,
+  mlResults: CandidateProduct[],
+): CandidateProduct[] {
+  const meta = STORE_META[source];
+  const base = mlResults.slice(0, 4);
+  if (base.length === 0) return [];
+
+  return base.map((ref, i) => {
+    const variation = deterministicVariation(`${source}${query}${i}`, i);
+    const rawPrice = ref.price !== null ? ref.price * (1 + variation) : null;
+    const price = rawPrice !== null ? Math.round(rawPrice * 100) / 100 : null;
+    const suffix = meta.suffix[i % meta.suffix.length] ?? '';
+    return {
+      source: source as CandidateProduct['source'],
+      title: suffix ? `${ref.title} ${suffix}` : ref.title,
+      price,
+      currency: 'BRL',
+      imageUrl: null,
+      productUrl: `https://www.${meta.urlBase}/busca?q=${encodeURIComponent(query)}`,
+    };
+  });
+}
+
+// ── API pública ────────────────────────────────────────────────────
+export async function searchAllDemo(
+  query: string,
+): Promise<Record<string, CandidateProduct[]>> {
+  const mlResults = await fetchML(query);
+
+  const candidates: Record<string, CandidateProduct[]> = {};
+
+  if (mlResults.length > 0) {
+    candidates['mercadolivre'] = mlResults.slice(0, 4);
+    candidates['magalu'] = mockFromML('magalu', query, mlResults);
+    candidates['netshoes'] = mockFromML('netshoes', query, mlResults);
+  }
+
+  return candidates;
+}
+
+// ── Estatísticas ───────────────────────────────────────────────────
 export function calcStats(prices: number[]): {
   median: number | null;
   p25: number | null;
