@@ -1,5 +1,5 @@
 interface SidebarProps {
-  activeView: 'items' | 'search';
+  activeView: 'items' | 'search' | 'detail';
   onNavigate: (view: 'items' | 'search') => void;
 }
 
@@ -16,7 +16,7 @@ export function Sidebar({ activeView, onNavigate }: SidebarProps) {
 
       <nav className="sidebar__nav">
         <button
-          className={`sidebar__nav-item${activeView === 'items' ? ' sidebar__nav-item--active' : ''}`}
+          className={`sidebar__nav-item${activeView === 'items' || activeView === 'detail' ? ' sidebar__nav-item--active' : ''}`}
           onClick={() => onNavigate('items')}
         >
           <span className="sidebar__nav-icon">≡</span>
