@@ -2,14 +2,22 @@ import { useState } from 'react';
 import type { Product, SearchResponse } from '../api/search';
 import { ProductCard } from './ProductCard';
 
-type SortOrder = 'price-asc' | 'price-desc' | 'default';
+const SOURCE_LABELS: Record<string, string> = {
+  magalu: 'Magalu',
+  mercadolivre: 'Mercado Livre',
+  decathlon: 'Decathlon',
+  netshoes: 'Netshoes',
+  centauro: 'Centauro',
+};
+
+type SortOrder = 'relevance' | 'price-asc' | 'price-desc';
 
 interface ResultsGridProps {
   data: SearchResponse;
 }
 
 export function ResultsGrid({ data }: ResultsGridProps) {
-  const [sort, setSort] = useState<SortOrder>('default');
+  const [sort, setSort] = useState<SortOrder>('relevance');
   const [activeSource, setActiveSource] = useState<string>('all');
 
   const sources = Array.from(new Set(data.results.map((p) => p.source)));
@@ -20,6 +28,9 @@ export function ResultsGrid({ data }: ResultsGridProps) {
       : data.results.filter((p) => p.source === activeSource);
 
   const sorted = [...filtered].sort((a, b) => {
+    if (sort === 'relevance') {
+      return (b.similarity ?? 0) - (a.similarity ?? 0);
+    }
     if (sort === 'price-asc') {
       if (a.price === null) return 1;
       if (b.price === null) return -1;
@@ -35,6 +46,14 @@ export function ResultsGrid({ data }: ResultsGridProps) {
 
   return (
     <div className="results">
+      {data.search_query && (
+        <div className="results__query-info">
+          <span className="results__query-label">IA buscou:</span>
+          <em className="results__query-text">"{data.search_query}"</em>
+          <span className="results__count">{data.results.length} resultado{data.results.length !== 1 ? 's' : ''} encontrado{data.results.length !== 1 ? 's' : ''}</span>
+        </div>
+      )}
+
       <div className="results__controls">
         <div className="results__filters">
           <button
@@ -49,8 +68,7 @@ export function ResultsGrid({ data }: ResultsGridProps) {
               className={activeSource === src ? 'filter-btn active' : 'filter-btn'}
               onClick={() => setActiveSource(src)}
             >
-              {src === 'magalu' ? 'Magalu' : src} (
-              {data.results.filter((p) => p.source === src).length})
+              {SOURCE_LABELS[src] ?? src} ({data.results.filter((p) => p.source === src).length})
             </button>
           ))}
         </div>
@@ -60,7 +78,7 @@ export function ResultsGrid({ data }: ResultsGridProps) {
           value={sort}
           onChange={(e) => setSort(e.target.value as SortOrder)}
         >
-          <option value="default">Ordenar: Padrão</option>
+          <option value="relevance">Ordenar: Relevância</option>
           <option value="price-asc">Menor preço</option>
           <option value="price-desc">Maior preço</option>
         </select>

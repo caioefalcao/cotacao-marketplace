@@ -3,6 +3,7 @@ import { itemsDb, quotationsDb } from '../db.js';
 import { screenshotUrl } from '../utils/screenshot.js';
 import { refineSearchQuery } from '../utils/queryRefiner.js';
 import { filterAndRank } from '../utils/similarity.js';
+import { refreshProductPrice } from '../utils/priceRefresher.js';
 import type { SourceAdapter } from '../adapters/types.js';
 
 export function registerQuotesRoute(app: FastifyInstance, adapters: SourceAdapter[]): void {
@@ -14,8 +15,9 @@ export function registerQuotesRoute(app: FastifyInstance, adapters: SourceAdapte
     const item = itemsDb.findById(id);
     if (!item) return reply.code(404).send({ error: 'Item não encontrado' });
 
-    const searchQuery = await refineSearchQuery(item.name, item.description);
-    app.log.info(`[quote] item="${item.name}" → query refinada="${searchQuery}"`);
+    const queries = await refineSearchQuery(item.name, item.description);
+    const searchQuery = queries[0];
+    app.log.info(`[quote] item="${item.name}" → queries="${queries.join(' | ')}"`);
 
     const results = await Promise.allSettled(
       adapters.map(async (adapter) => {
@@ -70,7 +72,7 @@ export function registerQuotesRoute(app: FastifyInstance, adapters: SourceAdapte
     return quotationsDb.listByItem(id);
   });
 
-  // Search candidates per marketplace without saving (top 3 per source)
+  // Search candidates per marketplace without saving — runs all AI-refined queries
   app.get<{ Params: { id: string } }>('/api/items/:id/candidates', async (req, reply) => {
     const id = Number(req.params.id);
     if (isNaN(id)) return reply.code(400).send({ error: 'ID inválido' });
@@ -78,29 +80,50 @@ export function registerQuotesRoute(app: FastifyInstance, adapters: SourceAdapte
     const item = itemsDb.findById(id);
     if (!item) return reply.code(404).send({ error: 'Item não encontrado' });
 
-    const searchQuery = await refineSearchQuery(item.name, item.description);
+    const queries = await refineSearchQuery(item.name, item.description);
+    app.log.info(`[candidates] item="${item.name}" → queries=${JSON.stringify(queries)}`);
 
     const settled = await Promise.allSettled(
-      adapters.map((adapter) =>
-        Promise.race([
-          adapter.search(searchQuery),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('timeout')), 25000),
+      adapters.map(async (adapter) => {
+        // Run all queries for this adapter in parallel
+        const perQuery = await Promise.allSettled(
+          queries.map((q) =>
+            Promise.race([
+              adapter.search(q),
+              new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('timeout')), 25000),
+              ),
+            ]),
           ),
-        ]),
-      ),
+        );
+
+        // Collect top candidates per query, deduplicate by productUrl
+        const seen = new Set<string>();
+        const pool: object[] = [];
+        perQuery.forEach((r, qi) => {
+          if (r.status !== 'fulfilled') return;
+          const ranked = filterAndRank(r.value, queries[qi], 3);
+          for (const p of ranked) {
+            const key = (p as { productUrl: string }).productUrl;
+            if (!seen.has(key)) {
+              seen.add(key);
+              pool.push(p);
+            }
+          }
+        });
+
+        return { source: adapter.name, products: pool };
+      }),
     );
 
     const candidates: Record<string, object[]> = {};
-    settled.forEach((result, index) => {
-      const source = adapters[index].name;
-      if (result.status === 'fulfilled') {
-        const top3 = filterAndRank(result.value, searchQuery, 3);
-        if (top3.length > 0) candidates[source] = top3;
+    settled.forEach((result) => {
+      if (result.status === 'fulfilled' && result.value.products.length > 0) {
+        candidates[result.value.source] = result.value.products;
       }
     });
 
-    return { search_query: searchQuery, candidates };
+    return { search_queries: queries, search_query: queries[0], candidates };
   });
 
   // Save user-selected products as quotations (no screenshot at this step)
@@ -143,6 +166,39 @@ export function registerQuotesRoute(app: FastifyInstance, adapters: SourceAdapte
     const deleted = quotationsDb.deleteOne(id);
     if (!deleted) return reply.code(404).send({ error: 'Cotação não encontrada' });
     reply.code(204);
+  });
+
+  // Refresh prices of existing quotations by re-visiting their product URLs
+  app.post<{ Params: { id: string } }>('/api/items/:id/quotations/refresh', async (req, reply) => {
+    const id = Number(req.params.id);
+    if (isNaN(id)) return reply.code(400).send({ error: 'ID inválido' });
+    if (!itemsDb.findById(id)) return reply.code(404).send({ error: 'Item não encontrado' });
+
+    const quotations = quotationsDb.listByItem(id).filter((q) => !!q.product_url);
+
+    const results = await Promise.allSettled(
+      quotations.map(async (q) => {
+        const newPrice = await refreshProductPrice(q.product_url!, q.source);
+        if (newPrice !== null) {
+          quotationsDb.refreshPrice(q.id, newPrice);
+        }
+        return { id: q.id, newPrice };
+      }),
+    );
+
+    const updated = results.filter(
+      (r) => r.status === 'fulfilled' && r.value.newPrice !== null,
+    ).length;
+
+    const errors = results
+      .map((r, i) => ({ quotation_id: quotations[i].id, r }))
+      .filter(({ r }) => r.status === 'rejected')
+      .map(({ quotation_id, r }) => ({
+        quotation_id,
+        message: r.status === 'rejected' ? String(r.reason) : '',
+      }));
+
+    return { updated, total: quotations.length, errors };
   });
 
   // Update price / url of a quotation

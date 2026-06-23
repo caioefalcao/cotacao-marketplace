@@ -15,6 +15,7 @@ export interface Product {
   imageUrl: string | null;
   productUrl: string;
   screenshotPath?: string;
+  similarity?: number;
 }
 
 export interface SourceAdapter {

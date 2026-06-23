@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { Product, SourceAdapter } from '../adapters/types.js';
 import { TtlCache } from '../utils/cache.js';
 import { refineSearchQuery } from '../utils/queryRefiner.js';
-import { filterAndRank } from '../utils/similarity.js';
+import { rankAll } from '../utils/similarity.js';
 
 const ADAPTER_TIMEOUT_MS = 25000;
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -42,7 +42,8 @@ export function registerSearchRoute(app: FastifyInstance, adapters: SourceAdapte
       }
 
       // Only refine when description is provided
-      const searchQuery = description ? await refineSearchQuery(name, description) : name;
+      const queries = description ? await refineSearchQuery(name, description) : [name];
+      const searchQuery = queries[0];
 
       const cacheKey = `${name}||${description ?? ''}`;
       const cached = cache.get(cacheKey);
@@ -59,8 +60,7 @@ export function registerSearchRoute(app: FastifyInstance, adapters: SourceAdapte
       settled.forEach((result, index) => {
         const source = adapters[index].name;
         if (result.status === 'fulfilled') {
-          const top2 = filterAndRank(result.value, searchQuery, 2);
-          response.results.push(...top2);
+          response.results.push(...rankAll(result.value, searchQuery));
         } else {
           response.errors.push({ source, message: result.reason?.message ?? 'Unknown error' });
         }

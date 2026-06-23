@@ -413,6 +413,22 @@ a { color: inherit; }
 .search-bar__footer { display: flex; justify-content: flex-end; }
 
 /* ─── Results grid (kept from old design) ───────────────────────── */
+.results__query-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 8px 14px;
+  background: #f0f7ff;
+  border-left: 3px solid var(--primary);
+  border-radius: 0 6px 6px 0;
+  font-size: 13px;
+}
+.results__query-label { color: var(--text-muted); }
+.results__query-text { color: var(--primary); font-weight: 600; }
+.results__count { margin-left: auto; color: var(--text-muted); font-size: 12px; }
+
 .results__controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
 .results__filters { display: flex; gap: 8px; flex-wrap: wrap; }
 
@@ -462,6 +478,19 @@ a { color: inherit; }
 .product-card__price { font-size: 16px; font-weight: 700; color: var(--primary); }
 .product-card__cta { font-size: 12px; color: var(--text-muted); margin-top: auto; }
 .product-card:hover .product-card__cta { color: var(--primary); }
+
+.product-card__similarity {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid;
+  border-radius: 6px;
+  background: #fafafa;
+  width: fit-content;
+}
+.product-card__sim-pct { font-size: 13px; font-weight: 700; line-height: 1; }
+.product-card__sim-label { font-size: 11px; color: inherit; opacity: 0.85; }
 
 /* ─── QuotationScreen ───────────────────────────────────────────── */
 .qs__header {
@@ -696,6 +725,22 @@ a { color: inherit; }
   font-weight: 700;
   color: var(--text);
   margin-right: 4px;
+}
+.candidates__queries {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.candidates__query-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  background: #e8f0fe;
+  border: 1px solid #c5d5f8;
+  border-radius: 12px;
+  font-size: 11px;
+  color: #2952a3;
+  font-style: italic;
 }
 
 /* ─── Candidate card — product image ────────────────────────────── */

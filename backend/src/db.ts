@@ -193,6 +193,12 @@ export const quotationsDb = {
     db.prepare(`UPDATE quotations SET ${fields.join(', ')} WHERE id = ?`).run(...values);
     return db.prepare('SELECT * FROM quotations WHERE id = ?').get(id) as Quotation | undefined;
   },
+
+  refreshPrice(id: number, price: number): void {
+    db.prepare(
+      "UPDATE quotations SET price = ?, found_at = datetime('now', 'localtime') WHERE id = ?",
+    ).run(price, id);
+  },
 };
 
 export default db;

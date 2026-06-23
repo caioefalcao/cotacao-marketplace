@@ -3,7 +3,7 @@ import {
   getItem,
   updateItem,
   listQuotations,
-  triggerQuote,
+  refreshQuotations,
   deleteQuotation,
   updateQuotation,
 } from '../api/items';
@@ -45,14 +45,13 @@ export function QuotationScreen({ itemId, onBack }: Props) {
   const quotingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const QUOTING_MESSAGES = [
-    'Consultando IA para refinar a busca...',
-    'Buscando no Magazine Luiza...',
-    'Buscando no Mercado Livre...',
-    'Buscando na Decathlon...',
-    'Buscando na Netshoes...',
-    'Filtrando produtos mais relevantes...',
-    'Calculando mediana e percentis...',
-    'Quase lá, salvando resultados...',
+    'Verificando produtos selecionados...',
+    'Atualizando preço no Magazine Luiza...',
+    'Atualizando preço no Mercado Livre...',
+    'Atualizando preço na Decathlon...',
+    'Atualizando preço na Netshoes...',
+    'Recalculando mediana e percentis...',
+    'Quase lá, finalizando atualização...',
   ];
   const [editing, setEditing] = useState<EditingQuotation | null>(null);
   const [editingItem, setEditingItem] = useState(false);
@@ -85,7 +84,7 @@ export function QuotationScreen({ itemId, onBack }: Props) {
       setQuotingMsgIdx((i) => (i + 1) % QUOTING_MESSAGES.length);
     }, 2200);
     try {
-      await triggerQuote(itemId);
+      await refreshQuotations(itemId);
       await refresh();
     } finally {
       if (quotingIntervalRef.current) clearInterval(quotingIntervalRef.current);
@@ -233,7 +232,7 @@ export function QuotationScreen({ itemId, onBack }: Props) {
             <div className="spinner spinner--lg" />
             <p className="quoting-overlay__msg">{QUOTING_MESSAGES[quotingMsgIdx]}</p>
             <p className="quoting-overlay__hint">
-              Buscando nos marketplaces e filtrando os resultados mais relevantes.<br />
+              Visitando os produtos já selecionados para obter os preços atuais.<br />
               Isso pode levar até 30 segundos.
             </p>
           </div>

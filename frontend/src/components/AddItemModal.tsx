@@ -31,6 +31,7 @@ export function AddItemModal({ onClose, onDone }: AddItemModalProps) {
 
   const [createdItemId, setCreatedItemId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchQueries, setSearchQueries] = useState<string[]>([]);
   const [candidates, setCandidates] = useState<Record<string, CandidateProduct[]>>({});
   const [selected, setSelected] = useState<CandidateProduct[]>([]);
 
@@ -50,6 +51,7 @@ export function AddItemModal({ onClose, onDone }: AddItemModalProps) {
 
       const result = await getItemCandidates(item.id);
       setSearchQuery(result.search_query);
+      setSearchQueries(result.search_queries ?? [result.search_query]);
       setCandidates(result.candidates);
       setStep('select');
     } catch (err) {
@@ -199,11 +201,20 @@ export function AddItemModal({ onClose, onDone }: AddItemModalProps) {
             <h2>Selecione os produtos para a cotação</h2>
             <p className="modal__subtitle">
               <strong>{name}</strong>
-              {searchQuery && (
+              {searchQueries.length > 1 ? (
+                <> · IA gerou {searchQueries.length} buscas para o kit</>
+              ) : searchQuery ? (
                 <> · IA buscou: <em>"{searchQuery}"</em></>
-              )}
+              ) : null}
               {' '}· {selected.length} selecionado{selected.length !== 1 ? 's' : ''}
             </p>
+            {searchQueries.length > 1 && (
+              <div className="candidates__queries">
+                {searchQueries.map((q) => (
+                  <span key={q} className="candidates__query-tag">{q}</span>
+                ))}
+              </div>
+            )}
             {description && (
               <div className="candidates__item-desc">
                 <span className="candidates__item-desc-label">Descrição:</span> {description}

@@ -37,6 +37,7 @@ export interface CandidateProduct {
 
 export interface CandidatesResponse {
   search_query: string;
+  search_queries: string[];
   candidates: Record<string, CandidateProduct[]>;
 }
 
@@ -144,6 +145,14 @@ export async function updateQuotation(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
+  if (!res.ok) throw new Error(`Erro ${res.status}`);
+  return res.json();
+}
+
+export async function refreshQuotations(
+  itemId: number,
+): Promise<{ updated: number; total: number; errors: { quotation_id: number; message: string }[] }> {
+  const res = await fetch(`/api/items/${itemId}/quotations/refresh`, { method: 'POST' });
   if (!res.ok) throw new Error(`Erro ${res.status}`);
   return res.json();
 }

@@ -8,7 +8,16 @@ let browser: Browser | null = null;
 
 export async function getBrowser(): Promise<Browser> {
   if (!browser) {
-    browser = await chromium.launch({ headless: true }) as unknown as Browser;
+    browser = await chromium.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-extensions',
+      ],
+    }) as unknown as Browser;
   }
   return browser;
 }

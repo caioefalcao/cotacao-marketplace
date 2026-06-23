@@ -45,3 +45,13 @@ export function filterAndRank(
     .slice(0, topN)
     .map(({ product }) => product);
 }
+
+/**
+ * Returns ALL products sorted by similarity (descending), with the similarity
+ * score attached. No minimum threshold — intended for display in search views.
+ */
+export function rankAll(products: Product[], query: string): Product[] {
+  return products
+    .map((p) => ({ ...p, similarity: scoreSimilarity(query, p.title) }))
+    .sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0));
+}

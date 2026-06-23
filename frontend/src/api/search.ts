@@ -7,6 +7,7 @@ export interface Product {
   currency: string;
   imageUrl: string | null;
   productUrl: string;
+  similarity?: number;
 }
 
 export interface SearchResponse {
